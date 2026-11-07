@@ -5,13 +5,18 @@ import { getState, setState } from "@/lib/blob";
 import { startPoll } from "@/lib/poll";
 import ComplianceScore from "@/components/ComplianceScore";
 import RuleTable from "@/components/RuleTable";
+import VulnerabilityCard from "@/components/VulnerabilityCard";
 
 type DashboardState = {
   compliance: { score: number; totalRules: number; passedRules: number; failedRules: number; rules: { name: string; status: string; remediation: string }[]; lastChecked: string } | null;
+  rules: { name: string; status: string; remediation: string }[];
+  vulnerabilities: { bySeverity: { critical: number; high: number; medium: number; low: number }; total: number; topPackage: string; lastChecked: string } | null;
 };
 
 const EMPTY: DashboardState = {
   compliance: null,
+  rules: [],
+  vulnerabilities: null,
 };
 
 const POLL_INTERVAL_MS = 30_000;
@@ -25,19 +30,34 @@ export default function Page() {
 
     const fetchAll = async () => {
       try {
-        const compRes = await fetch("/api/compliance", { cache: "no-store" });
+        const [compRes, vulnRes] = await Promise.allSettled([
+          fetch("/api/compliance", { cache: "no-store" }),
+          fetch("/api/vulnerabilities", { cache: "no-store" }),
+        ]);
 
         const compliance =
-          compRes.ok ? (await compRes.json()) : null;
+          compRes.status === "fulfilled" && compRes.value.ok
+            ? (await compRes.value.json())
+            : null;
+        const vulnerabilities =
+          vulnRes.status === "fulfilled" && vulnRes.value.ok
+            ? (await vulnRes.value.json())
+            : null;
 
         if (!mounted) return;
 
-        if (compliance === null) {
+        const allFailed = compliance === null && vulnerabilities === null;
+
+        if (allFailed) {
           const fallback = await getState<DashboardState>(EMPTY);
           setState(fallback);
           setStale(true);
         } else {
-          const newState: DashboardState = { compliance };
+          const newState: DashboardState = {
+            compliance: compliance ?? state.compliance,
+            rules: compliance?.rules ?? state.rules,
+            vulnerabilities: vulnerabilities ?? state.vulnerabilities,
+          };
           try {
             await setState(newState);
           } catch {
@@ -75,11 +95,17 @@ export default function Page() {
           lastChecked={state.compliance?.lastChecked ?? "—"}
         />
         <div className="md:col-span-2 bg-white p-4 rounded shadow border">
-          <RuleTable rules={state.compliance?.rules ?? []} />
+          <RuleTable rules={state.rules} />
         </div>
+        <VulnerabilityCard
+          bySeverity={state.vulnerabilities?.bySeverity ?? { critical: 0, high: 0, medium: 0, low: 0 }}
+          total={state.vulnerabilities?.total ?? 0}
+          topPackage={state.vulnerabilities?.topPackage ?? "—"}
+          lastChecked={state.vulnerabilities?.lastChecked ?? "—"}
+        />
       </div>
       <p className="text-xs text-gray-500">
-        Last checked: {state.compliance?.lastChecked ?? "—"}
+        Last checked: {state.compliance?.lastChecked ?? state.vulnerabilities?.lastChecked ?? "—"}
       </p>
       {stale && (
         <p className="text-yellow-600 text-sm mt-2">
