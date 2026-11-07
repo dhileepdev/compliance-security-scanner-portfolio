@@ -41,9 +41,9 @@
       "remediation": "Review the policy rule and update the manifest to satisfy the check."
     }
   ],
-  "score": 62,
+  "score": 40,
   "totalRules": 5,
-  "passedRules": 5,
+  "passedRules": 2,
   "failedRules": 3,
   "lastChecked": "2026-11-07T10:37:37.093084Z"
 }
