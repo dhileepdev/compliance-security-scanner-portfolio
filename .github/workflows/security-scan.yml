@@ -1,0 +1,62 @@
+name: Security Scan
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Kyverno
+        run: |
+          curl -sSfL https://github.com/kyverno/kyverno/releases/download/v1.11.3/kyverno-cli_1.11.3_linux_x86_64.tar.gz \
+            | tar -xz -C /usr/local/bin kyverno
+          kyverno version
+
+      - name: Run Kyverno policies against fixtures
+        id: kyverno
+        run: |
+          bash scripts/aggregate-kyverno.sh
+          echo "score=$(bash scripts/kyverno-score.sh)" >> $GITHUB_OUTPUT
+
+      - name: Append to compliance history
+        run: |
+          bash scripts/append-history.sh
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz \
+            | tar -xz -C /usr/local/bin trivy
+          trivy --version
+
+      - name: Run Trivy filesystem scan
+        run: |
+          bash scanners/scan-fs.sh
+
+  commit-results:
+    if: github.event_name == 'push' && github.ref_name == 'main'
+    needs: [scan, trivy]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Commit scan results
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add compliance/last-run.json compliance/history.jsonl trivy/last-run.json
+          git commit -m "chore: update compliance and vulnerability scan results [skip ci]" || echo "no changes to commit"
+          git push
