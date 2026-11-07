@@ -3,15 +3,15 @@
   "Trivy": {
     "Version": "0.76.1"
   },
-  "ReportID": "01a1b593-9c06-7816-bf91-f0c16a9d0f09",
-  "CreatedAt": "2026-11-07T16:05:12.26253+05:30",
-  "ArtifactID": "sha256:5397c4d3bb439867d60fdeb01b46efd4c374f9599426f487c8b8f89ce2b6e198",
+  "ReportID": "01a1b593-cc51-7305-b808-a3ce78f54398",
+  "CreatedAt": "2026-11-07T16:05:24.625199+05:30",
+  "ArtifactID": "sha256:65f50f38c76fbdb4a9f342d466fbc51bfc7936137a6d82e0784b600e689a1d2d",
   "ArtifactName": ".",
   "ArtifactType": "repository",
   "Metadata": {
     "Branch": "main",
-    "Commit": "2427a5bf8a8f8f98805d56a2494f95ca42b3bd7d",
-    "CommitMsg": "feat: add Kyverno CEL compliance policies and test fixtures",
+    "Commit": "84483eb8563a2b33c38593f132fbf901ec14c106",
+    "CommitMsg": "feat: add Trivy scanner setup and filesystem scan script",
     "Author": "dhileep \u003cdhileep1992@gmail.com\u003e",
     "Committer": "dhileep \u003cdhileep1992@gmail.com\u003e"
   }

@@ -1,0 +1,49 @@
+{
+  "rules": [
+    {
+      "name": "disallow-latest-tag",
+      "policy": "policies/disallow-latest-tag.yaml",
+      "passed": 1,
+      "failed": 1,
+      "status": "fail",
+      "remediation": "Review the policy rule and update the manifest to satisfy the check."
+    },
+    {
+      "name": "no-public-s3",
+      "policy": "policies/no-public-s3.yaml",
+      "passed": 2,
+      "failed": 0,
+      "status": "pass",
+      "remediation": "Review the policy rule and update the manifest to satisfy the check."
+    },
+    {
+      "name": "require-encryption-at-rest",
+      "policy": "policies/require-encryption-at-rest.yaml",
+      "passed": 0,
+      "failed": 0,
+      "status": "pass",
+      "remediation": "Review the policy rule and update the manifest to satisfy the check."
+    },
+    {
+      "name": "require-resource-limits",
+      "policy": "policies/require-resource-limits.yaml",
+      "passed": 1,
+      "failed": 1,
+      "status": "fail",
+      "remediation": "Review the policy rule and update the manifest to satisfy the check."
+    },
+    {
+      "name": "require-team-label",
+      "policy": "policies/require-team-label.yaml",
+      "passed": 1,
+      "failed": 1,
+      "status": "fail",
+      "remediation": "Review the policy rule and update the manifest to satisfy the check."
+    }
+  ],
+  "score": 62,
+  "totalRules": 5,
+  "passedRules": 5,
+  "failedRules": 3,
+  "lastChecked": "2026-11-07T10:37:37.093084Z"
+}
