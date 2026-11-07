@@ -1,0 +1,8 @@
+# Trivy container image scan reference.
+
+# For local demo, scan a sample application image:
+#   trivy image --scanners vuln --format json --output trivy/image-last-run.json \
+#     --no-progress nginx:1.27
+#
+# CI runs trivy fs (above) on every push/PR. Image scanning can be added by
+# uncommenting the command above and committing trivy/image-last-run.json.

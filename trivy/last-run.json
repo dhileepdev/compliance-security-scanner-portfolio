@@ -1,0 +1,18 @@
+{
+  "SchemaVersion": 2,
+  "Trivy": {
+    "Version": "0.76.1"
+  },
+  "ReportID": "01a1b593-9c06-7816-bf91-f0c16a9d0f09",
+  "CreatedAt": "2026-11-07T16:05:12.26253+05:30",
+  "ArtifactID": "sha256:5397c4d3bb439867d60fdeb01b46efd4c374f9599426f487c8b8f89ce2b6e198",
+  "ArtifactName": ".",
+  "ArtifactType": "repository",
+  "Metadata": {
+    "Branch": "main",
+    "Commit": "2427a5bf8a8f8f98805d56a2494f95ca42b3bd7d",
+    "CommitMsg": "feat: add Kyverno CEL compliance policies and test fixtures",
+    "Author": "dhileep \u003cdhileep1992@gmail.com\u003e",
+    "Committer": "dhileep \u003cdhileep1992@gmail.com\u003e"
+  }
+}
