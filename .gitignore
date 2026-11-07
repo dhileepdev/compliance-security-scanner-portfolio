@@ -1,0 +1,13 @@
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.env
+.env.local
+node_modules/
+dist/
+.next/
+out/
+.DS_Store
+*.log
+test-results/
+playwright-report/
