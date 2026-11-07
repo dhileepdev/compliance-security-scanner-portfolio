@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getState, setState } from "@/lib/blob";
-import ComplianceScore from "@/components/ComplianceScore";
 import RuleTable from "@/components/RuleTable";
 import VulnerabilityCard from "@/components/VulnerabilityCard";
 import TrendChart from "@/components/TrendChart";
-import LastUpdated from "@/components/LastUpdated";
 
 type DashboardState = {
   compliance: { score: number; totalRules: number; passedRules: number; failedRules: number; rules: { name: string; status: string; remediation: string }[]; lastChecked: string } | null;
@@ -27,6 +25,8 @@ const POLL_INTERVAL_MS = 30_000;
 export default function Page() {
   const [state, setState] = useState<DashboardState>(EMPTY);
   const [stale, setStale] = useState(false);
+  const [fresh, setFresh] = useState<string | null>(null);
+  const runFetch = useRef<(() => void) | undefined>(undefined);
 
   useEffect(() => {
     let mounted = true;
@@ -53,6 +53,7 @@ export default function Page() {
             : null;
 
         if (!mounted) return;
+        setFresh(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
 
         const allFailed = compliance === null && vulnerabilities === null;
 
@@ -84,6 +85,7 @@ export default function Page() {
     };
 
     void fetchAll();
+    runFetch.current = fetchAll;
     const interval = setInterval(fetchAll, POLL_INTERVAL_MS);
     return () => {
       mounted = false;
@@ -91,39 +93,102 @@ export default function Page() {
     };
   }, []);
 
+  const c = state.compliance;
+  const v = state.vulnerabilities;
+  const score = c?.score ?? 0;
+  const passed = c?.passedRules ?? 0;
+  const failed = c?.failedRules ?? 0;
+  const totalRules = c?.totalRules ?? 0;
+  const vulnTotal = v?.total ?? 0;
+
   return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Compliance & Security Scanner Dashboard</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <ComplianceScore
-          score={state.compliance?.score ?? 0}
-          totalRules={state.compliance?.totalRules ?? 0}
-          passedRules={state.compliance?.passedRules ?? 0}
-          failedRules={state.compliance?.failedRules ?? 0}
-          rules={state.compliance?.rules ?? []}
-          lastChecked={state.compliance?.lastChecked ?? "—"}
-        />
-        <div className="md:col-span-2 bg-white p-4 rounded shadow border">
-          <RuleTable rules={state.rules} />
+    <div className="space-y-[24px]">
+      {/* Title row */}
+      <div className="section-head">
+        <div>
+          <h1 className="text-[#131416]">Compliance &amp; Security Scanner</h1>
+          <p className="muted text-[12px] mt-1">
+            Kyverno CEL policies &bull; Trivy scanning &bull; GitHub Actions CI/CD
+          </p>
         </div>
-        <VulnerabilityCard
-          bySeverity={state.vulnerabilities?.bySeverity ?? { critical: 0, high: 0, medium: 0, low: 0 }}
-          total={state.vulnerabilities?.total ?? 0}
-          topPackage={state.vulnerabilities?.topPackage ?? "—"}
-          lastChecked={state.vulnerabilities?.lastChecked ?? "—"}
-        />
+        <div className="flex items-center gap-3">
+          <button className="btn btn-primary" onClick={() => runFetch.current?.()}>
+            Refresh
+          </button>
+          <span className="muted text-[12px]">Updated {fresh ?? "—"}</span>
+        </div>
       </div>
-      <div className="bg-white p-4 rounded shadow border">
-        <TrendChart history={state.history} />
+
+      {/* KPI strip — score is the answer figure, leads */}
+      <div className="kpi-strip">
+        <div className="kpi-cell col-span-1">
+          <span className="kpi-label">Compliance score</span>
+          <span className="kpi-value">{score}%</span>
+          <span className="kpi-unit">of {totalRules} rules</span>
+        </div>
+        <div className="kpi-cell">
+          <span className="kpi-label">Rules passing</span>
+          <span className="kpi-value">{passed}</span>
+          <span className="kpi-unit">of {totalRules}</span>
+        </div>
+        <div className="kpi-cell">
+          <span className="kpi-label">Rules failing</span>
+          <span className={`kpi-value ${failed > 0 ? "text-[#c4242a]" : "text-[#131416]"}`}>{failed}</span>
+          <span className="kpi-unit">{failed > 0 ? "needs fix" : "clean"}</span>
+        </div>
+        <div className="kpi-cell">
+          <span className="kpi-label">Vulnerabilities</span>
+          <span className="kpi-value">{vulnTotal}</span>
+          <span className="kpi-unit">by severity</span>
+        </div>
       </div>
-      <p className="text-xs text-gray-500 mt-2">
-        Last checked: {state.compliance?.lastChecked ?? state.vulnerabilities?.lastChecked ?? "—"}
-      </p>
+
+      {/* Rules */}
+      <div className="section">
+        <div className="section-head">
+          <span className="section-title">Rules</span>
+          <button className="btn">View all</button>
+        </div>
+        <div className="flat-card">
+          <RuleTable rules={c?.rules ?? []} />
+        </div>
+      </div>
+
+      {/* Vulnerabilities */}
+      <div className="section">
+        <div className="section-head">
+          <span className="section-title">Vulnerabilities</span>
+          <button className="btn">View all</button>
+        </div>
+        <div className="flat-card">
+          <VulnerabilityCard
+            bySeverity={v?.bySeverity ?? { critical: 0, high: 0, medium: 0, low: 0 }}
+            total={vulnTotal}
+            topPackage={v?.topPackage ?? "—"}
+            lastChecked={v?.lastChecked ?? "—"}
+          />
+        </div>
+      </div>
+
+      {/* Trend */}
+      <div className="section">
+        <div className="section-head">
+          <span className="section-title">Compliance trend</span>
+          <button className="btn">View all</button>
+        </div>
+        <div className="flat-card">
+          <TrendChart history={state.history} />
+        </div>
+      </div>
+
       {stale && (
-        <p className="text-yellow-600 text-sm mt-2">
-          Showing stale state — some APIs unreachable.
-        </p>
+        <div className="section">
+          <div className="flat-card" style={{ padding: "12px 24px" }}>
+            <span className="dot dot-warn"></span>
+            <span className="muted text-[12px]">Showing stale state — some APIs unreachable.</span>
+          </div>
+        </div>
       )}
-    </main>
+    </div>
   );
 }
