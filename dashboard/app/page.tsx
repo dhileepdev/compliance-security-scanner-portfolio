@@ -2,21 +2,24 @@
 
 import { useState, useEffect } from "react";
 import { getState, setState } from "@/lib/blob";
-import { startPoll } from "@/lib/poll";
 import ComplianceScore from "@/components/ComplianceScore";
 import RuleTable from "@/components/RuleTable";
 import VulnerabilityCard from "@/components/VulnerabilityCard";
+import TrendChart from "@/components/TrendChart";
+import LastUpdated from "@/components/LastUpdated";
 
 type DashboardState = {
   compliance: { score: number; totalRules: number; passedRules: number; failedRules: number; rules: { name: string; status: string; remediation: string }[]; lastChecked: string } | null;
   rules: { name: string; status: string; remediation: string }[];
   vulnerabilities: { bySeverity: { critical: number; high: number; medium: number; low: number }; total: number; topPackage: string; lastChecked: string } | null;
+  history: { timestamp: string; score: number; totalRules: number; passedRules: number; failedRules: number }[];
 };
 
 const EMPTY: DashboardState = {
   compliance: null,
   rules: [],
   vulnerabilities: null,
+  history: [],
 };
 
 const POLL_INTERVAL_MS = 30_000;
@@ -30,9 +33,10 @@ export default function Page() {
 
     const fetchAll = async () => {
       try {
-        const [compRes, vulnRes] = await Promise.allSettled([
+        const [compRes, vulnRes, histRes] = await Promise.allSettled([
           fetch("/api/compliance", { cache: "no-store" }),
           fetch("/api/vulnerabilities", { cache: "no-store" }),
+          fetch("/api/history", { cache: "no-store" }),
         ]);
 
         const compliance =
@@ -42,6 +46,10 @@ export default function Page() {
         const vulnerabilities =
           vulnRes.status === "fulfilled" && vulnRes.value.ok
             ? (await vulnRes.value.json())
+            : null;
+        const history =
+          histRes.status === "fulfilled" && histRes.value.ok
+            ? (await histRes.value.json())
             : null;
 
         if (!mounted) return;
@@ -57,6 +65,7 @@ export default function Page() {
             compliance: compliance ?? state.compliance,
             rules: compliance?.rules ?? state.rules,
             vulnerabilities: vulnerabilities ?? state.vulnerabilities,
+            history: history ?? state.history,
           };
           try {
             await setState(newState);
@@ -104,7 +113,10 @@ export default function Page() {
           lastChecked={state.vulnerabilities?.lastChecked ?? "—"}
         />
       </div>
-      <p className="text-xs text-gray-500">
+      <div className="bg-white p-4 rounded shadow border">
+        <TrendChart history={state.history} />
+      </div>
+      <p className="text-xs text-gray-500 mt-2">
         Last checked: {state.compliance?.lastChecked ?? state.vulnerabilities?.lastChecked ?? "—"}
       </p>
       {stale && (
