@@ -1,24 +1,91 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { getState, setState } from "@/lib/blob";
+import { startPoll } from "@/lib/poll";
+import ComplianceScore from "@/components/ComplianceScore";
+import RuleTable from "@/components/RuleTable";
+
+type DashboardState = {
+  compliance: { score: number; totalRules: number; passedRules: number; failedRules: number; rules: { name: string; status: string; remediation: string }[]; lastChecked: string } | null;
+};
+
+const EMPTY: DashboardState = {
+  compliance: null,
+};
+
+const POLL_INTERVAL_MS = 30_000;
+
 export default function Page() {
+  const [state, setState] = useState<DashboardState>(EMPTY);
+  const [stale, setStale] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchAll = async () => {
+      try {
+        const compRes = await fetch("/api/compliance", { cache: "no-store" });
+
+        const compliance =
+          compRes.ok ? (await compRes.json()) : null;
+
+        if (!mounted) return;
+
+        if (compliance === null) {
+          const fallback = await getState<DashboardState>(EMPTY);
+          setState(fallback);
+          setStale(true);
+        } else {
+          const newState: DashboardState = { compliance };
+          try {
+            await setState(newState);
+          } catch {
+            // Blob not configured locally
+          }
+          setState(newState);
+          setStale(false);
+        }
+      } catch {
+        if (!mounted) return;
+        const fallback = await getState<DashboardState>(EMPTY);
+        setState(fallback);
+        setStale(true);
+      }
+    };
+
+    void fetchAll();
+    const interval = setInterval(fetchAll, POLL_INTERVAL_MS);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Compliance & Security Scanner Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white p-4 rounded shadow border">
-          <h2 className="font-semibold mb-2">Compliance Score</h2>
-          <p className="text-2xl font-bold">—%</p>
-          <p className="text-xs text-gray-500">No data yet</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow border">
-          <h2 className="font-semibold mb-2">Rules</h2>
-          <p className="text-2xl font-bold">—</p>
-          <p className="text-xs text-gray-500">No data yet</p>
-        </div>
-        <div className="bg-white p-4 rounded shadow border">
-          <h2 className="font-semibold mb-2">Vulnerabilities</h2>
-          <p className="text-2xl font-bold">—</p>
-          <p className="text-xs text-gray-500">No data yet</p>
+        <ComplianceScore
+          score={state.compliance?.score ?? 0}
+          totalRules={state.compliance?.totalRules ?? 0}
+          passedRules={state.compliance?.passedRules ?? 0}
+          failedRules={state.compliance?.failedRules ?? 0}
+          rules={state.compliance?.rules ?? []}
+          lastChecked={state.compliance?.lastChecked ?? "—"}
+        />
+        <div className="md:col-span-2 bg-white p-4 rounded shadow border">
+          <RuleTable rules={state.compliance?.rules ?? []} />
         </div>
       </div>
+      <p className="text-xs text-gray-500">
+        Last checked: {state.compliance?.lastChecked ?? "—"}
+      </p>
+      {stale && (
+        <p className="text-yellow-600 text-sm mt-2">
+          Showing stale state — some APIs unreachable.
+        </p>
+      )}
     </main>
   );
 }
