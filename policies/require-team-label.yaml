@@ -1,0 +1,15 @@
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-team-label
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  validations:
+    - expression: "has(object.metadata.labels) && 'team' in object.metadata.labels"
+      message: "Pod must carry a 'team' label"

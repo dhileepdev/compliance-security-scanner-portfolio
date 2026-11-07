@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: compliant-pod
+  labels:
+    team: platform
+    env: demo
+spec:
+  containers:
+    - name: app
+      image: nginx:1.27
+      resources:
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+  volumes:
+    - name: data
+      emptyDir: {}

@@ -1,0 +1,20 @@
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: no-public-s3
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  validations:
+    - expression: >-
+        !has(object.spec.volumes) ||
+        object.spec.volumes.all(v,
+          !has(v.awsElasticBlockStore) ||
+          v.awsElasticBlockStore.fsType != "public"
+        )
+      message: "EBS volumes must not be publicly accessible"

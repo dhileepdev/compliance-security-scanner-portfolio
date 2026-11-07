@@ -1,0 +1,21 @@
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-encryption-at-rest
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: [CREATE, UPDATE]
+        resources: [persistentvolumeclaims]
+  validations:
+    - expression: >-
+        has(object.spec.storageClassName) &&
+        object.spec.storageClassName != "" &&
+        (has(object.metadata.annotations) &&
+         object.metadata.annotations["volume.beta.kubernetes.io/storage-class"] != "" ||
+         has(object.metadata.annotations) &&
+         object.metadata.annotations["volume.kubernetes.io/storage-class"] != "")
+      message: "PersistentVolumeClaim must specify an encrypted storage class"
