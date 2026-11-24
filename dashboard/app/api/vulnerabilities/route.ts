@@ -16,26 +16,61 @@ const EMPTY: VulnerabilityData = {
   lastChecked: "—",
 };
 
-function severityKey(s: string): keyof SeverityCounts {
-  const k = s.toLowerCase();
-  if (k === "critical") return "critical";
-  if (k === "high") return "high";
-  if (k === "medium") return "medium";
-  return "low";
-}
+// Support config priority: UI localStorage > env vars > GitHub default
 
 export async function GET(_request: Request) {
   try {
-    const repo = process.env.GITHUB_REPOSITORY;
-    if (!repo) throw new Error("GITHUB_REPOSITORY not configured");
+    // 1. Try UI-configured API (set from dashboard Settings section)
+    const uiApi = (global as any)?.VULN_API;
+    if (uiApi) {
+      const res = await fetch(uiApi, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const d = await res.json();
+        return Response.json({
+          bySeverity: d.bySeverity ?? { critical: 0, high: 0, medium: 0, low: 0 },
+          total: d.total ?? 0,
+          topPackage: d.topPackage ?? "—",
+          lastChecked: d.lastChecked ?? "—",
+        });
+      }
+      // Fall through to GitHub if UI API fails
+    }
 
-    const token = process.env.GITHUB_PAT;
+    // 2. Try env var configured API
+    const envApi = process.env.VULN_API;
+    if (envApi) {
+      const res = await fetch(envApi, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const d = await res.json();
+        return Response.json({
+          bySeverity: d.bySeverity ?? { critical: 0, high: 0, medium: 0, low: 0 },
+          total: d.total ?? 0,
+          topPackage: d.topPackage ?? "—",
+          lastChecked: d.lastChecked ?? "—",
+        });
+      }
+      // Fall through to GitHub if env API fails
+    }
+
+    // 3. Fall back to GitHub
+    const repo = process.env.GITHUB_REPOSITORY;
+    if (!repo) throw new Error("GITHUB_REPOSITORY not configured and no API set");
+
+    const token = process.env.GITHUB_PAT
+      ? `Bearer ${process.env.GITHUB_PAT}`
+      : "";
+
     const res = await fetch(
       `https://api.github.com/repos/${repo}/contents/trivy/last-run.json`,
       {
-        headers: token
-          ? { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
-          : { Accept: "application/vnd.github+json" },
+        headers: new Headers({
+          "Authorization": token,
+          "Accept": "application/vnd.github+json",
+        }),
         cache: "no-store",
       }
     );
@@ -55,7 +90,13 @@ export async function GET(_request: Request) {
 
     for (const result of parsed.Results ?? []) {
       for (const vuln of result.Vulnerabilities ?? []) {
-        const sev = severityKey(vuln.Severity ?? "low");
+        const sev = vuln.Severity?.toLowerCase() === "critical"
+          ? "critical"
+          : vuln.Severity?.toLowerCase() === "high"
+            ? "high"
+            : vuln.Severity?.toLowerCase() === "medium"
+              ? "medium"
+              : "low";
         counts[sev]++;
         total++;
         if (vuln.PkgName) {
