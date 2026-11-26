@@ -12,18 +12,51 @@ type HistoryData = HistoryEntry[];
 
 const EMPTY: HistoryData = [];
 
+// Support config priority: UI localStorage > env vars > GitHub default
+
 export async function GET(_request: Request) {
   try {
-    const repo = process.env.GITHUB_REPOSITORY;
-    if (!repo) throw new Error("GITHUB_REPOSITORY not configured");
+    // 1. Try UI-configured API (set from dashboard Settings section)
+    const uiApi = (global as any)?.HISTORY_API;
+    if (uiApi) {
+      const res = await fetch(uiApi, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const d = await res.json();
+        return Response.json(d);
+      }
+      // Fall through to GitHub if UI API fails
+    }
 
-    const token = process.env.GITHUB_PAT;
+    // 2. Try env var configured API
+    const envApi = process.env.HISTORY_API;
+    if (envApi) {
+      const res = await fetch(envApi, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const d = await res.json();
+        return Response.json(d);
+      }
+      // Fall through to GitHub if env API fails
+    }
+
+    // 3. Fall back to GitHub
+    const repo = process.env.GITHUB_REPOSITORY;
+    if (!repo) throw new Error("GITHUB_REPOSITORY not configured and no API set");
+
+    const token = process.env.GITHUB_PAT
+      ? `Bearer ${process.env.GITHUB_PAT}`
+      : "";
+
     const res = await fetch(
       `https://api.github.com/repos/${repo}/contents/compliance/history.jsonl`,
       {
-        headers: token
-          ? { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
-          : { Accept: "application/vnd.github+json" },
+        headers: new Headers({
+          "Authorization": token,
+          "Accept": "application/vnd.github+json",
+        }),
         cache: "no-store",
       }
     );

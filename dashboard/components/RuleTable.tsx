@@ -1,35 +1,61 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
+// Accessible responsive table:
+// - Semantic <table> with <caption>
+// - Wrapper with tabindex="0" role="region" aria-labelledby
+// - container-type: inline-size for @container queries
+// - Sticky thead/th for desktop
+// - @container (width < 600px) stacked layout with ::before labels from CSS vars
+// - Keeps table semantics intact (no display: block on table elements)
+// - data-label attributes for CSS ::before injection in stacked mode
 type Rule = { name: string; status: string; remediation: string };
 
 export default function RuleTable({ rules }: { rules: Rule[] }) {
   if (rules.length === 0) {
     return (
-      <div className="flex flex-col gap-2">
-        <p className="muted text-[12px]">No rule data available</p>
+      <div className="panel">
+        <div className="empty-state">
+          <div className="empty-title">No rule data available</div>
+          <div className="empty-copy">
+            No rules have been scanned yet. Run a compliance scan to populate the table.
+          </div>
+          <button className="btn btn-primary">Refresh</button>
+        </div>
       </div>
     );
   }
+
   return (
-    <div className="overflow-x-auto">
-      <table>
-        <thead>
-          <tr>
-            <th className="pb-3">Rule</th>
-            <th className="pb-3 num pr-4">Status</th>
-            <th className="pb-3">Remediation</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rules.map((rule) => (
-            <tr key={rule.name} className="rule-row">
-              <td className="rule-name">{rule.name}</td>
-              <td className={`rule-status ${rule.status === "fail" ? "text-[#c4242a]" : "text-[#1e7b4f]"}`}>
-                {rule.status}
-              </td>
-              <td className="rule-rem">{rule.remediation}</td>
+    <div className="panel">
+      <div className="table-wrapper" tabIndex={0} role="region" aria-labelledby="rules-table">
+        <table id="rules-table">
+          <caption>Compliance Rules</caption>
+          <thead>
+            <tr>
+              <th scope="col" className="sticky">Rule</th>
+              <th scope="col" className="sticky">Status</th>
+              <th scope="col" className="sticky">Remediation</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rules.map((rule, i) => (
+              <tr key={i}>
+                <td data-label="Rule" className="sticky">
+                  {rule.name}
+                </td>
+                <td data-label="Status" className="sticky">
+                  {rule.status}
+                </td>
+                <td data-label="Remediation" className="sticky">
+                  {rule.remediation}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

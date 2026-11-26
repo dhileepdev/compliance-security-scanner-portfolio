@@ -16,14 +16,17 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
-    "@tailwindcss/postcss": "^4.1.0",
+    "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitest/coverage-v8": "^5.1.0",
     "happy-dom": "^15.0.0",
-    "tailwindcss": "^4.1.0",
+    "tailwindcss": "4.3.3",
     "typescript": "^5.7.0",
     "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=22.12"
   }
 }
