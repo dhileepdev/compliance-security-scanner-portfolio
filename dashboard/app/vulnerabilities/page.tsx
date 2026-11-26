@@ -11,7 +11,7 @@ export default function VulnerabilitiesPage() {
       <div className="title-row">
         <div>
           <h1>Vulnerabilities</h1>
-          <p className="title-sub">Open security vulnerabilities detected across scanned dependencies.</p>
+          <p className="title-sub">Open security vulnerabilities found in scanned dependencies.</p>
         </div>
         <div className="title-actions">
           <button className="btn btn-outline" onClick={() => void refresh()}>
